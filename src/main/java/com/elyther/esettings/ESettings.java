@@ -75,12 +75,11 @@ public final class ESettings extends JavaPlugin implements Listener {
     // =========================================================
 
     private boolean onCommand(
-            CommandSender sender,
-            Command command,
-            String label,
-            String[] args
-    ) {
-
+        CommandSender sender,
+        Command command,
+        String label,
+        String[] args
+) {
         if (!command.getName().equalsIgnoreCase("settings")) {
             return false;
         }
