@@ -1,0 +1,176 @@
+# ============================================================
+# ESETTINGS
+# ============================================================
+
+
+# ============================================================
+# GUI
+# ============================================================
+
+gui:
+
+  # GUI başlığı
+  title: "&8Sunucu Ayarları"
+
+  # 1-6 arası ola bilər
+  rows: 3
+
+
+# ============================================================
+# FEATURES
+# ============================================================
+
+features:
+
+  # Public chat
+  public-chat: true
+
+  # Normal mob spawn
+  mob-spawn: true
+
+  # Phantom spawn
+  phantom-spawn: true
+
+
+# ============================================================
+# GUI ITEMS
+# ============================================================
+
+items:
+
+
+  # ==========================================================
+  # PUBLIC CHAT
+  # ==========================================================
+
+  public-chat:
+
+    # GUI-də görünsün?
+    enabled: true
+
+    # Hazır sistem
+    type: PUBLIC_CHAT
+
+    # Slot
+    slot: 11
+
+    # Item
+    material: OAK_SIGN
+
+    # Ad
+    name: "&aPublic Chat"
+
+    # Lore
+    lore:
+      - "&7Public chat'i açıb bağla."
+      - ""
+      - "&7Status: %status%"
+      - ""
+      - "&eKliklə dəyişdir."
+
+
+  # ==========================================================
+  # MOB SPAWN
+  # ==========================================================
+
+  mob-spawn:
+
+    enabled: true
+
+    type: MOB_SPAWN
+
+    slot: 13
+
+    material: ZOMBIE_HEAD
+
+    name: "&aMob Spawn"
+
+    lore:
+      - "&7Normal mob spawnlarını açıb bağla."
+      - ""
+      - "&7Status: %status%"
+      - ""
+      - "&eKliklə dəyişdir."
+
+
+  # ==========================================================
+  # PHANTOM SPAWN
+  # ==========================================================
+
+  phantom-spawn:
+
+    enabled: true
+
+    type: PHANTOM_SPAWN
+
+    slot: 15
+
+    material: PHANTOM_MEMBRANE
+
+    name: "&dPhantom Spawn"
+
+    lore:
+      - "&7Phantom spawnlarını açıb bağla."
+      - ""
+      - "&7Status: %status%"
+      - ""
+      - "&eKliklə dəyişdir."
+
+
+  # ==========================================================
+  # CUSTOM COMMAND EXAMPLE
+  # ==========================================================
+
+  example:
+
+    # false olduğu üçün hazırda GUI-də görünməyəcək
+    enabled: false
+
+    # Custom command item
+    type: COMMAND
+
+    # Slot
+    slot: 20
+
+    # Item material
+    material: FEATHER
+
+    # Item adı
+    name: "&bUçuş"
+
+    # Lore
+    lore:
+      - "&7Uçuş sistemini aç."
+      - ""
+      - "&eKliklə."
+
+    # Komandalar
+    commands:
+
+      # Console komandası
+      - "[console] fly %player%"
+
+    # Klikdən sonra GUI bağlansın?
+    close: false
+
+
+# ============================================================
+# MESSAGES
+# ============================================================
+
+messages:
+
+  public-chat-enabled: "&aPublic chat açıldı."
+  public-chat-disabled: "&cPublic chat bağlandı."
+
+  chat-disabled: "&cPublic chat hazırda bağlıdır."
+
+  mob-spawn-enabled: "&aMob spawn açıldı."
+  mob-spawn-disabled: "&cMob spawn bağlandı."
+
+  phantom-spawn-enabled: "&aPhantom spawn açıldı."
+  phantom-spawn-disabled: "&cPhantom spawn bağlandı."
+
+  no-permission: "&cBu komutu istifadə etmək üçün icazən yoxdur."
+
+  reload: "&aESettings config yeniləndi."
