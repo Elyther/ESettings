@@ -5,7 +5,6 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
@@ -24,7 +23,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
 
-public final class ESettings extends JavaPlugin implements Listener, CommandExecutor {
+public final class ESettings extends JavaPlugin implements Listener {
 
     private volatile boolean publicChatEnabled;
     private volatile boolean mobSpawnEnabled;
@@ -32,20 +31,21 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
 
+        saveDefaultConfig();
         loadSettings();
 
         Bukkit.getPluginManager().registerEvents(this, this);
 
-        Objects.requireNonNull(getCommand("settings")).setExecutor(this);
+        Objects.requireNonNull(getCommand("settings"))
+                .setExecutor(this::onCommand);
 
-        getLogger().info("ESettings aktiv edildi.");
+        getLogger().info("ESettings aktif edildi.");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("ESettings deaktiv edildi.");
+        getLogger().info("ESettings kapatildi.");
     }
 
     // =========================================================
@@ -53,17 +53,28 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
     // =========================================================
 
     private void loadSettings() {
-        publicChatEnabled = getConfig().getBoolean("features.public-chat", true);
-        mobSpawnEnabled = getConfig().getBoolean("features.mob-spawn", true);
-        phantomSpawnEnabled = getConfig().getBoolean("features.phantom-spawn", true);
+
+        publicChatEnabled = getConfig().getBoolean(
+                "features.public-chat",
+                true
+        );
+
+        mobSpawnEnabled = getConfig().getBoolean(
+                "features.mob-spawn",
+                true
+        );
+
+        phantomSpawnEnabled = getConfig().getBoolean(
+                "features.phantom-spawn",
+                true
+        );
     }
 
     // =========================================================
     // COMMAND
     // =========================================================
 
-    @Override
-    public boolean onCommand(
+    private boolean onCommand(
             CommandSender sender,
             Command command,
             String label,
@@ -74,15 +85,19 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
             return false;
         }
 
-        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+        // /settings reload
+        if (args.length > 0 &&
+                args[0].equalsIgnoreCase("reload")) {
 
             if (!sender.hasPermission("esettings.reload")) {
+
                 sender.sendMessage(color(
                         getConfig().getString(
                                 "messages.no-permission",
-                                "&cBu komutu kullanmak üçün icazen yoxdur."
+                                "&cBu işlemi yapmak için yetkin yok."
                         )
                 ));
+
                 return true;
             }
 
@@ -92,15 +107,20 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
             sender.sendMessage(color(
                     getConfig().getString(
                             "messages.reload",
-                            "&aESettings config yeniləndi."
+                            "&aESettings ayarlari yenilendi."
                     )
             ));
 
             return true;
         }
 
+        // Sadece oyuncu GUI açabilir
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Bu komutu oyun daxilinde istifade et.");
+
+            sender.sendMessage(
+                    "Bu komutu oyun icinde kullanmalisin."
+            );
+
             return true;
         }
 
@@ -110,27 +130,23 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
     }
 
     // =========================================================
-    // GUI
+    // GUI AÇ
     // =========================================================
 
     private void openSettings(Player player) {
 
-        String title = color(
-                getConfig().getString(
-                        "gui.title",
-                        "&8Sunucu Ayarları"
-                )
+        String title = getConfig().getString(
+                "gui.title",
+                "&8Sunucu Ayarlari"
         );
 
-        int rows = getConfig().getInt("gui.rows", 3);
+        int rows = getConfig().getInt(
+                "gui.rows",
+                3
+        );
 
-        if (rows < 1) {
-            rows = 1;
-        }
-
-        if (rows > 6) {
-            rows = 6;
-        }
+        // 1-6 satır
+        rows = Math.max(1, Math.min(6, rows));
 
         int size = rows * 9;
 
@@ -139,32 +155,42 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
         Inventory inventory = Bukkit.createInventory(
                 holder,
                 size,
-                Component.text(title)
+                Component.text(color(title))
         );
 
         holder.inventory = inventory;
 
-        ConfigurationSection itemsSection =
+        ConfigurationSection items =
                 getConfig().getConfigurationSection("items");
 
-        if (itemsSection != null) {
+        if (items != null) {
 
-            for (String id : itemsSection.getKeys(false)) {
+            for (String id : items.getKeys(false)) {
 
                 String path = "items." + id;
 
-                if (!getConfig().getBoolean(path + ".enabled", true)) {
+                // GUI'de görünsün mü?
+                if (!getConfig().getBoolean(
+                        path + ".enabled",
+                        true
+                )) {
                     continue;
                 }
 
-                int slot = getConfig().getInt(path + ".slot", -1);
+                int slot = getConfig().getInt(
+                        path + ".slot",
+                        -1
+                );
 
                 if (slot < 0 || slot >= size) {
                     continue;
                 }
 
                 String materialName =
-                        getConfig().getString(path + ".material", "STONE");
+                        getConfig().getString(
+                                path + ".material",
+                                "STONE"
+                        );
 
                 Material material =
                         Material.matchMaterial(materialName);
@@ -173,11 +199,17 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
                     material = Material.STONE;
                 }
 
-                ItemStack item = new ItemStack(material);
+                ItemStack item =
+                        new ItemStack(material);
 
-                ItemMeta meta = item.getItemMeta();
+                ItemMeta meta =
+                        item.getItemMeta();
 
                 if (meta != null) {
+
+                    // -------------------------------------------------
+                    // NAME
+                    // -------------------------------------------------
 
                     String name =
                             getConfig().getString(
@@ -185,25 +217,40 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
                                     "&f" + id
                             );
 
-                    name = replacePlaceholders(name, id);
+                    name = replacePlaceholders(
+                            name,
+                            id
+                    );
 
                     meta.displayName(
-                            Component.text(color(name))
+                            Component.text(
+                                    color(name)
+                            )
                     );
+
+                    // -------------------------------------------------
+                    // LORE
+                    // -------------------------------------------------
 
                     List<String> lore =
                             getConfig().getStringList(
                                     path + ".lore"
                             );
 
-                    List<Component> finalLore = new ArrayList<>();
+                    List<Component> finalLore =
+                            new ArrayList<>();
 
                     for (String line : lore) {
 
-                        line = replacePlaceholders(line, id);
+                        line = replacePlaceholders(
+                                line,
+                                id
+                        );
 
                         finalLore.add(
-                                Component.text(color(line))
+                                Component.text(
+                                        color(line)
+                                )
                         );
                     }
 
@@ -212,9 +259,15 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
                     item.setItemMeta(meta);
                 }
 
-                inventory.setItem(slot, item);
+                inventory.setItem(
+                        slot,
+                        item
+                );
 
-                holder.slots.put(slot, id);
+                holder.slots.put(
+                        slot,
+                        id
+                );
             }
         }
 
@@ -226,24 +279,33 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
     // =========================================================
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
+    public void onInventoryClick(
+            InventoryClickEvent event
+    ) {
 
-        if (!(event.getWhoClicked() instanceof Player player)) {
+        if (!(event.getWhoClicked()
+                instanceof Player player)) {
             return;
         }
 
-        if (!(event.getView().getTopInventory().getHolder()
+        if (!(event.getView()
+                .getTopInventory()
+                .getHolder()
                 instanceof SettingsHolder holder)) {
             return;
         }
 
+        // GUI içindeki itemler taşınamaz
         event.setCancelled(true);
 
         if (event.getClickedInventory() == null) {
             return;
         }
 
-        if (event.getClickedInventory() != event.getView().getTopInventory()) {
+        // Sadece üst GUI
+        if (event.getClickedInventory()
+                != event.getView()
+                .getTopInventory()) {
             return;
         }
 
@@ -255,13 +317,24 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
             return;
         }
 
-        handleItemClick(player, id);
+        handleItemClick(
+                player,
+                id
+        );
     }
 
-    @EventHandler
-    public void onInventoryDrag(InventoryDragEvent event) {
+    // =========================================================
+    // GUI DRAG
+    // =========================================================
 
-        if (event.getView().getTopInventory().getHolder()
+    @EventHandler
+    public void onInventoryDrag(
+            InventoryDragEvent event
+    ) {
+
+        if (event.getView()
+                .getTopInventory()
+                .getHolder()
                 instanceof SettingsHolder) {
 
             event.setCancelled(true);
@@ -272,9 +345,13 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
     // ITEM CLICK
     // =========================================================
 
-    private void handleItemClick(Player player, String id) {
+    private void handleItemClick(
+            Player player,
+            String id
+    ) {
 
-        String path = "items." + id;
+        String path =
+                "items." + id;
 
         String type =
                 getConfig().getString(
@@ -282,28 +359,61 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
                         "COMMAND"
                 ).toUpperCase(Locale.ROOT);
 
+        /*
+         * Önce özel hazır sistemleri kontrol ediyoruz.
+         *
+         * Bunlar:
+         *
+         * PUBLIC_CHAT
+         * MOB_SPAWN
+         * PHANTOM_SPAWN
+         *
+         * Diğer bütün type'lar ise configdeki
+         * commands listesini çalıştırır.
+         */
+
         switch (type) {
 
-            case "PUBLIC_CHAT" -> togglePublicChat(player);
+            case "PUBLIC_CHAT" -> {
 
-            case "MOB_SPAWN" -> toggleMobSpawn(player);
+                togglePublicChat(player);
 
-            case "PHANTOM_SPAWN" -> togglePhantomSpawn(player);
+            }
 
-            case "COMMAND" -> executeCommands(
-                    player,
-                    getConfig().getStringList(
-                            path + ".commands"
-                    )
-            );
+            case "MOB_SPAWN" -> {
+
+                toggleMobSpawn(player);
+
+            }
+
+            case "PHANTOM_SPAWN" -> {
+
+                togglePhantomSpawn(player);
+
+            }
 
             default -> {
-                player.sendMessage(color(
-                        "&cESettings: Bilinmeyen item tipi: " + type
-                ));
+
+                /*
+                 * ÖNEMLİ:
+                 *
+                 * Artıq "Bilinmeyen item tipi"
+                 * mesajı yoxdur.
+                 *
+                 * Type nə olursa olsun commands:
+                 * varsa işləyəcək.
+                 */
+
+                executeCommands(
+                        player,
+                        getConfig().getStringList(
+                                path + ".commands"
+                        )
+                );
             }
         }
 
+        // GUI bağlansın?
         boolean close =
                 getConfig().getBoolean(
                         path + ".close",
@@ -311,8 +421,12 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
                 );
 
         if (close) {
+
             player.closeInventory();
+
         } else {
+
+            // Status yenilənsin deyə GUI-ni yenidən açırıq
             openSettings(player);
         }
     }
@@ -321,9 +435,12 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
     // PUBLIC CHAT
     // =========================================================
 
-    private void togglePublicChat(Player player) {
+    private void togglePublicChat(
+            Player player
+    ) {
 
-        publicChatEnabled = !publicChatEnabled;
+        publicChatEnabled =
+                !publicChatEnabled;
 
         getConfig().set(
                 "features.public-chat",
@@ -332,28 +449,31 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
 
         saveConfig();
 
-        String message;
-
         if (publicChatEnabled) {
 
-            message = getConfig().getString(
-                    "messages.public-chat-enabled",
-                    "&aPublic chat açıldı."
-            );
+            player.sendMessage(color(
+                    getConfig().getString(
+                            "messages.public-chat-enabled",
+                            "&aGenel sohbet açıldı."
+                    )
+            ));
 
         } else {
 
-            message = getConfig().getString(
-                    "messages.public-chat-disabled",
-                    "&cPublic chat bağlandı."
-            );
+            player.sendMessage(color(
+                    getConfig().getString(
+                            "messages.public-chat-disabled",
+                            "&cGenel sohbet kapatıldı."
+                    )
+            ));
         }
-
-        player.sendMessage(color(message));
     }
 
+    // Public chat kapalıysa mesaj gönderilemez
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onChat(AsyncChatEvent event) {
+    public void onChat(
+            AsyncChatEvent event
+    ) {
 
         if (!publicChatEnabled) {
 
@@ -363,7 +483,7 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
                     color(
                             getConfig().getString(
                                     "messages.chat-disabled",
-                                    "&cPublic chat hazırda bağlıdır."
+                                    "&cGenel sohbet şu anda kapalı."
                             )
                     )
             );
@@ -374,9 +494,12 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
     // MOB SPAWN
     // =========================================================
 
-    private void toggleMobSpawn(Player player) {
+    private void toggleMobSpawn(
+            Player player
+    ) {
 
-        mobSpawnEnabled = !mobSpawnEnabled;
+        mobSpawnEnabled =
+                !mobSpawnEnabled;
 
         getConfig().set(
                 "features.mob-spawn",
@@ -385,35 +508,47 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
 
         saveConfig();
 
-        String message;
-
         if (mobSpawnEnabled) {
 
-            message = getConfig().getString(
-                    "messages.mob-spawn-enabled",
-                    "&aMob spawn açıldı."
-            );
+            player.sendMessage(color(
+                    getConfig().getString(
+                            "messages.mob-spawn-enabled",
+                            "&aMob doğması açıldı."
+                    )
+            ));
 
         } else {
 
-            message = getConfig().getString(
-                    "messages.mob-spawn-disabled",
-                    "&cMob spawn bağlandı."
-            );
+            player.sendMessage(color(
+                    getConfig().getString(
+                            "messages.mob-spawn-disabled",
+                            "&cMob doğması kapatıldı."
+                    )
+            ));
         }
-
-        player.sendMessage(color(message));
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onCreatureSpawn(CreatureSpawnEvent event) {
+    // =========================================================
+    // CREATURE SPAWN
+    // =========================================================
 
-        if (event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) {
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onCreatureSpawn(
+            CreatureSpawnEvent event
+    ) {
+
+        // Sadece doğal spawnları kontrol ediyoruz.
+        // Spawner / plugin / command spawnları bozulmaz.
+        if (event.getSpawnReason()
+                != CreatureSpawnEvent.SpawnReason.NATURAL) {
+
             return;
         }
 
-        EntityType type = event.getEntityType();
+        EntityType type =
+                event.getEntityType();
 
+        // Phantom ayrı kontrol edilir
         if (type == EntityType.PHANTOM) {
 
             if (!phantomSpawnEnabled) {
@@ -423,6 +558,7 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
             return;
         }
 
+        // Diğer doğal moblar
         if (!mobSpawnEnabled) {
             event.setCancelled(true);
         }
@@ -432,9 +568,12 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
     // PHANTOM
     // =========================================================
 
-    private void togglePhantomSpawn(Player player) {
+    private void togglePhantomSpawn(
+            Player player
+    ) {
 
-        phantomSpawnEnabled = !phantomSpawnEnabled;
+        phantomSpawnEnabled =
+                !phantomSpawnEnabled;
 
         getConfig().set(
                 "features.phantom-spawn",
@@ -443,28 +582,28 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
 
         saveConfig();
 
-        String message;
-
         if (phantomSpawnEnabled) {
 
-            message = getConfig().getString(
-                    "messages.phantom-spawn-enabled",
-                    "&aPhantom spawn açıldı."
-            );
+            player.sendMessage(color(
+                    getConfig().getString(
+                            "messages.phantom-spawn-enabled",
+                            "&aPhantom doğması açıldı."
+                    )
+            ));
 
         } else {
 
-            message = getConfig().getString(
-                    "messages.phantom-spawn-disabled",
-                    "&cPhantom spawn bağlandı."
-            );
+            player.sendMessage(color(
+                    getConfig().getString(
+                            "messages.phantom-spawn-disabled",
+                            "&cPhantom doğması kapatıldı."
+                    )
+            ));
         }
-
-        player.sendMessage(color(message));
     }
 
     // =========================================================
-    // CUSTOM COMMANDS
+    // CONFIG COMMAND
     // =========================================================
 
     private void executeCommands(
@@ -474,34 +613,74 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
 
         for (String command : commands) {
 
+            if (command == null ||
+                    command.trim().isEmpty()) {
+
+                continue;
+            }
+
             command = command
-                    .replace("%player%", player.getName())
-                    .replace("%player_name%", player.getName());
+                    .replace(
+                            "%player%",
+                            player.getName()
+                    )
+                    .replace(
+                            "%player_name%",
+                            player.getName()
+                    );
+
+            // -------------------------------------------------
+            // CONSOLE
+            // -------------------------------------------------
 
             if (command.startsWith("[console]")) {
 
                 command = command
-                        .substring("[console]".length())
+                        .substring(
+                                "[console]".length()
+                        )
                         .trim();
 
-                Bukkit.dispatchCommand(
-                        Bukkit.getConsoleSender(),
-                        command
-                );
+                if (!command.isEmpty()) {
 
-            } else if (command.startsWith("[player]")) {
+                    Bukkit.dispatchCommand(
+                            Bukkit.getConsoleSender(),
+                            command
+                    );
+                }
+
+                continue;
+            }
+
+            // -------------------------------------------------
+            // PLAYER
+            // -------------------------------------------------
+
+            if (command.startsWith("[player]")) {
 
                 command = command
-                        .substring("[player]".length())
+                        .substring(
+                                "[player]".length()
+                        )
                         .trim();
 
-                player.performCommand(command);
+                if (!command.isEmpty()) {
 
-            } else {
+                    player.performCommand(
+                            command
+                    );
+                }
 
-                // Prefix yoxdursa player komandası kimi işləyir.
-                player.performCommand(command);
+                continue;
             }
+
+            // -------------------------------------------------
+            // PREFIX YOXDURSA PLAYER
+            // -------------------------------------------------
+
+            player.performCommand(
+                    command.trim()
+            );
         }
     }
 
@@ -518,48 +697,63 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
 
         switch (id) {
 
-            case "public-chat" ->
-                    status = publicChatEnabled
-                            ? color("&aAçıq")
-                            : color("&cBağlı");
+            case "public-chat" -> {
 
-            case "mob-spawn" ->
-                    status = mobSpawnEnabled
-                            ? color("&aAçıq")
-                            : color("&cBağlı");
+                status = publicChatEnabled
+                        ? "&aAçık"
+                        : "&cKapalı";
+            }
 
-            case "phantom-spawn" ->
-                    status = phantomSpawnEnabled
-                            ? color("&aAçıq")
-                            : color("&cBağlı");
+            case "mob-spawn" -> {
 
-            default ->
-                    status = "";
+                status = mobSpawnEnabled
+                        ? "&aAçık"
+                        : "&cKapalı";
+            }
+
+            case "phantom-spawn" -> {
+
+                status = phantomSpawnEnabled
+                        ? "&aAçık"
+                        : "&cKapalı";
+            }
+
+            default -> {
+                status = "";
+            }
         }
 
         return text
-                .replace("%status%", status)
-                .replace("%player%", "");
+                .replace(
+                        "%status%",
+                        status
+                );
     }
 
     // =========================================================
     // COLOR
     // =========================================================
 
-    private String color(String text) {
+    private String color(
+            String text
+    ) {
 
         if (text == null) {
             return "";
         }
 
-        return text.replace("&", "§");
+        return text.replace(
+                "&",
+                "§"
+        );
     }
 
     // =========================================================
     // GUI HOLDER
     // =========================================================
 
-    private static class SettingsHolder implements InventoryHolder {
+    private static class SettingsHolder
+            implements InventoryHolder {
 
         private Inventory inventory;
 
@@ -571,4 +765,4 @@ public final class ESettings extends JavaPlugin implements Listener, CommandExec
             return inventory;
         }
     }
-                  }
+}
