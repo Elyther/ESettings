@@ -21,7 +21,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 
 public final class ESettings extends JavaPlugin implements Listener {
 
@@ -38,7 +43,7 @@ public final class ESettings extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(this, this);
 
         Objects.requireNonNull(getCommand("settings"))
-                .setExecutor(this::onCommand);
+                .setExecutor(this);
 
         getLogger().info("ESettings aktif edildi.");
     }
@@ -74,12 +79,14 @@ public final class ESettings extends JavaPlugin implements Listener {
     // COMMAND
     // =========================================================
 
-    private boolean onCommand(
-        CommandSender sender,
-        Command command,
-        String label,
-        String[] args
-) {
+    @Override
+    public boolean onCommand(
+            CommandSender sender,
+            Command command,
+            String label,
+            String[] args
+    ) {
+
         if (!command.getName().equalsIgnoreCase("settings")) {
             return false;
         }
@@ -113,7 +120,7 @@ public final class ESettings extends JavaPlugin implements Listener {
             return true;
         }
 
-        // Sadece oyuncu GUI açabilir
+        // Console GUI açamaz
         if (!(sender instanceof Player player)) {
 
             sender.sendMessage(
@@ -123,13 +130,14 @@ public final class ESettings extends JavaPlugin implements Listener {
             return true;
         }
 
+        // Herkes açabilir
         openSettings(player);
 
         return true;
     }
 
     // =========================================================
-    // GUI AÇ
+    // GUI
     // =========================================================
 
     private void openSettings(Player player) {
@@ -144,7 +152,7 @@ public final class ESettings extends JavaPlugin implements Listener {
                 3
         );
 
-        // 1-6 satır
+        // Minimum 1, maksimum 6 satır
         rows = Math.max(1, Math.min(6, rows));
 
         int size = rows * 9;
@@ -168,7 +176,7 @@ public final class ESettings extends JavaPlugin implements Listener {
 
                 String path = "items." + id;
 
-                // GUI'de görünsün mü?
+                // Item aktif mi?
                 if (!getConfig().getBoolean(
                         path + ".enabled",
                         true
@@ -181,6 +189,7 @@ public final class ESettings extends JavaPlugin implements Listener {
                         -1
                 );
 
+                // Yanlış slot
                 if (slot < 0 || slot >= size) {
                     continue;
                 }
@@ -194,6 +203,7 @@ public final class ESettings extends JavaPlugin implements Listener {
                 Material material =
                         Material.matchMaterial(materialName);
 
+                // Material səhvdirsə STONE istifadə et
                 if (material == null) {
                     material = Material.STONE;
                 }
@@ -206,9 +216,9 @@ public final class ESettings extends JavaPlugin implements Listener {
 
                 if (meta != null) {
 
-                    // -------------------------------------------------
+                    // =================================================
                     // NAME
-                    // -------------------------------------------------
+                    // =================================================
 
                     String name =
                             getConfig().getString(
@@ -227,9 +237,9 @@ public final class ESettings extends JavaPlugin implements Listener {
                             )
                     );
 
-                    // -------------------------------------------------
+                    // =================================================
                     // LORE
-                    // -------------------------------------------------
+                    // =================================================
 
                     List<String> lore =
                             getConfig().getStringList(
@@ -294,14 +304,14 @@ public final class ESettings extends JavaPlugin implements Listener {
             return;
         }
 
-        // GUI içindeki itemler taşınamaz
+        // GUI itemləri götürülməsin
         event.setCancelled(true);
 
         if (event.getClickedInventory() == null) {
             return;
         }
 
-        // Sadece üst GUI
+        // Yalnız GUI-nin üst hissəsi
         if (event.getClickedInventory()
                 != event.getView()
                 .getTopInventory()) {
@@ -359,16 +369,17 @@ public final class ESettings extends JavaPlugin implements Listener {
                 ).toUpperCase(Locale.ROOT);
 
         /*
-         * Önce özel hazır sistemleri kontrol ediyoruz.
-         *
-         * Bunlar:
+         * Hazır sistemlər:
          *
          * PUBLIC_CHAT
          * MOB_SPAWN
          * PHANTOM_SPAWN
          *
-         * Diğer bütün type'lar ise configdeki
-         * commands listesini çalıştırır.
+         * Başqa bütün type-lar:
+         *
+         * COMMANDS
+         *
+         * içindəki komandaları işlədəcək.
          */
 
         switch (type) {
@@ -394,10 +405,11 @@ public final class ESettings extends JavaPlugin implements Listener {
             default -> {
 
                 /*
-                 * ÖNEMLİ:
+                 * Burada artıq:
                  *
-                 * Artıq "Bilinmeyen item tipi"
-                 * mesajı yoxdur.
+                 * "Bilinmeyen item tipi"
+                 *
+                 * yoxdur.
                  *
                  * Type nə olursa olsun commands:
                  * varsa işləyəcək.
@@ -412,7 +424,7 @@ public final class ESettings extends JavaPlugin implements Listener {
             }
         }
 
-        // GUI bağlansın?
+        // Klikdən sonra GUI bağlansın?
         boolean close =
                 getConfig().getBoolean(
                         path + ".close",
@@ -425,7 +437,7 @@ public final class ESettings extends JavaPlugin implements Listener {
 
         } else {
 
-            // Status yenilənsin deyə GUI-ni yenidən açırıq
+            // Statusu yeniləmək üçün GUI-ni yenidən aç
             openSettings(player);
         }
     }
@@ -468,7 +480,10 @@ public final class ESettings extends JavaPlugin implements Listener {
         }
     }
 
-    // Public chat kapalıysa mesaj gönderilemez
+    // =========================================================
+    // CHAT EVENT
+    // =========================================================
+
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onChat(
             AsyncChatEvent event
@@ -536,8 +551,13 @@ public final class ESettings extends JavaPlugin implements Listener {
             CreatureSpawnEvent event
     ) {
 
-        // Sadece doğal spawnları kontrol ediyoruz.
-        // Spawner / plugin / command spawnları bozulmaz.
+        /*
+         * Yalnızca doğal spawnları bağlayırıq.
+         *
+         * Spawner, command və plugin spawnları
+         * təsirlənmir.
+         */
+
         if (event.getSpawnReason()
                 != CreatureSpawnEvent.SpawnReason.NATURAL) {
 
@@ -547,7 +567,7 @@ public final class ESettings extends JavaPlugin implements Listener {
         EntityType type =
                 event.getEntityType();
 
-        // Phantom ayrı kontrol edilir
+        // Phantom ayrıca kontrol edilir
         if (type == EntityType.PHANTOM) {
 
             if (!phantomSpawnEnabled) {
@@ -557,7 +577,7 @@ public final class ESettings extends JavaPlugin implements Listener {
             return;
         }
 
-        // Diğer doğal moblar
+        // Digər natural moblar
         if (!mobSpawnEnabled) {
             event.setCancelled(true);
         }
@@ -602,7 +622,7 @@ public final class ESettings extends JavaPlugin implements Listener {
     }
 
     // =========================================================
-    // CONFIG COMMAND
+    // CONFIG COMMANDS
     // =========================================================
 
     private void executeCommands(
@@ -618,6 +638,7 @@ public final class ESettings extends JavaPlugin implements Listener {
                 continue;
             }
 
+            // Placeholderlar
             command = command
                     .replace(
                             "%player%",
@@ -628,9 +649,9 @@ public final class ESettings extends JavaPlugin implements Listener {
                             player.getName()
                     );
 
-            // -------------------------------------------------
+            // =================================================
             // CONSOLE
-            // -------------------------------------------------
+            // =================================================
 
             if (command.startsWith("[console]")) {
 
@@ -651,9 +672,9 @@ public final class ESettings extends JavaPlugin implements Listener {
                 continue;
             }
 
-            // -------------------------------------------------
+            // =================================================
             // PLAYER
-            // -------------------------------------------------
+            // =================================================
 
             if (command.startsWith("[player]")) {
 
@@ -673,10 +694,11 @@ public final class ESettings extends JavaPlugin implements Listener {
                 continue;
             }
 
-            // -------------------------------------------------
-            // PREFIX YOXDURSA PLAYER
-            // -------------------------------------------------
+            // =================================================
+            // PREFIX YOXDUR
+            // =================================================
 
+            // Prefix yazılmayıbsa player kimi işlət
             player.performCommand(
                     command.trim()
             );
@@ -718,15 +740,14 @@ public final class ESettings extends JavaPlugin implements Listener {
             }
 
             default -> {
-                status = "";
+                // Digər itemlərdə status boş qalır
             }
         }
 
-        return text
-                .replace(
-                        "%status%",
-                        status
-                );
+        return text.replace(
+                "%status%",
+                status
+        );
     }
 
     // =========================================================
@@ -764,4 +785,4 @@ public final class ESettings extends JavaPlugin implements Listener {
             return inventory;
         }
     }
-}
+        }
